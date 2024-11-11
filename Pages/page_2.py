@@ -2,122 +2,86 @@ import openai
 import streamlit as st
 import os
 import requests
-from dotenv import load_dotenv
+from PIL import Image
+import folium
+from streamlit.components.v1 import html
 
 # Set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Load environment variables
-load_dotenv()
+# Set up Google Maps API key
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-# Streamlit option menu for navigation
-feature = st.selectbox(
-    "Choose a Feature",
-    ["Sprinkler Control Based on Weather", "Water Conservation Tips"]
-)
+# Function to get geocoding data from Google Maps
+def get_geocoding_data_google(city):
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {
+        "address": city,
+        "key": google_maps_api_key
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
 
-# Function to get water conservation tips from OpenAI
-def get_water_conservation_tips(user_input):
-    prompt = f"You are a water conservation expert. Provide personalized water-saving tips for the following scenario: {user_input}"
+    if response.status_code == 200 and len(data["results"]) > 0:
+        location = data["results"][0]["geometry"]["location"]
+        return {
+            "lat": location["lat"],
+            "lon": location["lng"]
+        }
+    else:
+        return f"Error: Unable to fetch geocoding data for {city}. {data.get('error_message', '')}"
+
+# Function to categorize reported issues using OpenAI
+def categorize_issue(description):
+    prompt = f"You are an assistant that categorizes community-reported water issues. Please categorize the following issue: {description}"
     try:
-        # Use the OpenAI API to get the response
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant focused on water conservation."},
+                {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=150
+            max_tokens=50
         )
         return response.choices[0]['message']['content'].strip()
     except Exception as e:
         return f"An error occurred: {e}"
 
-# Function to get weather data
-def get_weather_data(city):
-    api_key = "06a358e94ea3d909daffbe1a0a009559"  # Replace with your actual API key
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+# Streamlit UI setup
+st.title("Community Water Conservation Reporting Tool")
 
-    try:
-        response = requests.get(url)
+# User inputs for reporting an issue
+city = st.text_input("Enter the city where the issue is located:")
+additional_info = st.text_input("Enter additional information to refine location (e.g., cross streets, landmarks):")
+issue_description = st.text_area("Describe the water-related issue (e.g., leaking pipe, visible water wastage, etc.):")
+image = st.file_uploader("Upload a photo of the issue (optional):", type=['jpg', 'jpeg', 'png'])
 
-        if response.status_code == 200:
-            data = response.json()
-            return data
+if st.button("Report Issue"):
+    if city and issue_description:
+        # Get geocoding data using Google Maps API
+        location_query = f"{city} {additional_info}" if additional_info else city
+        geocoding_data = get_geocoding_data_google(location_query)
+        if isinstance(geocoding_data, dict):
+            st.write(f"### Location Coordinates for {city}")
+            st.write(f"Latitude: {geocoding_data['lat']}, Longitude: {geocoding_data['lon']}")
+
+            # Categorize the issue using OpenAI
+            category = categorize_issue(issue_description)
+            st.write("### Issue Category:")
+            st.write(category)
+
+            # Display uploaded image if available
+            if image is not None:
+                img = Image.open(image)
+                st.image(img, caption='Uploaded Image', use_column_width=True)
+
+            # Embed Google Maps using iframe with a draggable marker
+            map_url = f"https://www.google.com/maps/embed/v1/place?key={google_maps_api_key}&q={geocoding_data['lat']},{geocoding_data['lon']}&zoom=12"
+            st.write("### Map of Reported Issue Location:")
+            html(f'<iframe width="100%" height="500" frameborder="0" style="border:0" src="{map_url}" allowfullscreen></iframe>', height=500)
+
+            st.success("Thank you for reporting the issue. The relevant authorities have been notified.")
         else:
-            st.error(f"Error {response.status_code}: Unable to fetch data")
-            return None
-    except requests.exceptions.RequestException as e:
-        st.error(f"An error occurred: {e}")
-        return None
-
-# Function to decide whether to turn on sprinklers
-def control_sprinklers(weather_data):
-    if not weather_data:
-        return "Unable to determine sprinkler status."
-
-    # Extracting relevant data
-    precipitation = weather_data.get('rain', {}).get('1h', 0)  # Precipitation in the last hour (in mm)
-    description = weather_data['weather'][0]['description']
-    temp = weather_data['main']['temp']
-
-    # Decision logic based on weather conditions
-    if precipitation > 0:
-        return f"It's raining ({description}), with {precipitation} mm of rain in the last hour. Sprinklers are OFF."
+            st.warning(geocoding_data)
     else:
-        return f"No rain detected. Sprinklers are ON to water the garden."
-
-# Function to display "Sprinkler Control Based on Weather" feature
-def sprinkler_control_page():
-    st.title("Sprinkler Control Based on Weather")
-
-    # Input: City name
-    city = st.text_input("Enter the city name", "San Jose")
-
-    # Fetch and display weather data and sprinkler decision
-    if st.button("Get Weather & Control Sprinklers"):
-        if city:
-            weather_data = get_weather_data(city)
-            if weather_data:
-                # Show weather details
-                st.subheader(f"Weather in {city.capitalize()}")
-                st.write(f"Description: {weather_data['weather'][0]['description'].capitalize()}")
-                st.write(f"Temperature: {weather_data['main']['temp']}°C")
-                st.write(f"Humidity: {weather_data['main']['humidity']}%")
-                st.write(f"Wind Speed: {weather_data['wind']['speed']} m/s")
-                st.write(f"rainfall: {weather_data.get('rain', {}).get('1h', 0)} mm")
-
-                # Get sprinkler decision
-                sprinkler_status = control_sprinklers(weather_data)
-                st.subheader("Sprinkler Status:")
-                st.write(sprinkler_status)
-        else:
-            st.warning("Please enter a city name.")
-
-# Function to display "Water Conservation Tips" feature
-def water_conservation_page():
-    st.title("Water Conservation Tips Chatbot")
-
-    # User inputs for personalized water conservation tips
-    user_input = st.text_area("Describe your water usage habits or any specific questions you have about saving water:")
-
-    if st.button("Get Water Conservation Tips"):
-        if user_input:
-            # Get conservation tips from OpenAI
-            conservation_tips = get_water_conservation_tips(user_input)
-            st.write("### Personalized Water Conservation Tips:")
-            st.write(conservation_tips)
-        else:
-            st.warning("Please enter a description of your water usage habits to get tips.")
-
-# Function to show content for the page
-def show():
-    if feature == "Sprinkler Control Based on Weather":
-        sprinkler_control_page()  # Display Sprinkler Control page
-
-    elif feature == "Water Conservation Tips":
-        water_conservation_page()  # Display Water Conservation Tips page
-
-# Main logic to display the content based on feature selection
-show()
-
+        st.warning("Please enter both the city and a description of the issue.")
