@@ -21,8 +21,6 @@ page_bg_img = '''
 '''
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# Display logo at the top of the sidebar
-st.sidebar.image("/Users/dapensilver/Water-Habits-/water-habits/.streamlit/water .webp", use_column_width = True )  # Adjust path and width
 
 
 # Sidebar menu for navigation
