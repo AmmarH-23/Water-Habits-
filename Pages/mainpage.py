@@ -20,9 +20,10 @@ page_bg_img = '''
 </style>
 '''
 st.markdown(page_bg_img, unsafe_allow_html=True)
+
 # Display logo at the top of the sidebar
 st.sidebar.image("/Users/dapensilver/Water-Habits-/water-habits/.streamlit/water .webp", use_column_width = True )  # Adjust path and width
-st.sidebar.title("Water Habits")  # Add your app name or title
+
 
 # Sidebar menu for navigation
 from streamlit_option_menu import option_menu
@@ -41,6 +42,28 @@ feature = option_menu(
         "nav-link-selected": {"background-color": "#4B9CD3"},
     }
 )
+sidebar_title = '''
+<style>
+.sidebar-title {
+    font-size: 30px;
+    font-weight: bold;
+}
+</style>
+'''
+st.sidebar.markdown(sidebar_title, unsafe_allow_html=True)
+st.sidebar.markdown('<p class="sidebar-title">Water Habits</p>', unsafe_allow_html=True)
+
+ #Display the selected feature
+if feature == "Personalized Water Usage Insights":
+    st.sidebar.subheader("Personalized Water Usage Insights")
+    
+elif feature == "Sprinkler Control Based on Weather":
+    st.sidebar.subheader("Sprinkler Control Based on Weather")
+    
+
+elif feature == "Smart Irrigation Recommendations":
+    st.sidebar.subheader("Smart Irrigation Recommendations")
+   
 
 # Display content based on feature selection
 if feature == "Personalized Water Usage Insights":
