@@ -25,18 +25,17 @@ def analyze_water_usage(water_usage_data):
     except Exception as e:
         return f"An error occurred: {e}"
 
-# Streamlit UI setup
-st.title("Personalized Water Usage Insights")
-
-# User input for water usage data
-water_usage_data = st.text_area("Enter details about your household water usage (e.g., daily water meter readings, usage habits, etc.):")
-
-if st.button("Get Water Usage Insights"):
-    if water_usage_data:
-        # Get water usage insights from OpenAI
-        insights = analyze_water_usage(water_usage_data)
-        st.write("### Water Usage Insights:")
-        st.write(insights)
-    else:
-        st.warning("Please enter your water usage details to get insights.")
-
+# Show function to be called from main.py
+def show():
+    st.title("Personalized Water Usage Insights")
+    
+    # Input form to capture water usage data
+    water_usage_data = st.text_area("Enter your water usage data", "e.g., 500 gallons per week")
+    
+    if st.button("Analyze Water Usage"):
+        if water_usage_data:
+            insights = analyze_water_usage(water_usage_data)
+            st.subheader("Insights")
+            st.write(insights)
+        else:
+            st.warning("Please enter your water usage data.")

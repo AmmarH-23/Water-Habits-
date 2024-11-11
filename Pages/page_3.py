@@ -7,7 +7,7 @@ import requests
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Set up OpenWeatherMap API key
-openweathermap_api_key = os.getenv("OPENWEATHERMAP_API_KEY")
+openweathermap_api_key = os.getenv("OPENWEATHERMAP_API_KEY")  # Ensure to replace with your key
 
 # Function to get current weather data from OpenWeatherMap
 def get_weather_data(city):
@@ -55,28 +55,33 @@ def recommend_irrigation(weather_info, garden_size, plant_types):
         return f"An error occurred: {e}"
 
 # Streamlit UI setup
-st.title("Smart Irrigation Recommendations")
+def show():
+    st.title("Smart Irrigation Recommendations")
 
-# User inputs for garden irrigation
-city = st.text_input("Enter your city for real-time weather updates:")
-garden_size = st.number_input("Enter the size of your garden (in square meters):", min_value=1)
-plant_types = st.text_area("Enter the types of plants in your garden:")
+    # User inputs for garden irrigation
+    city = st.text_input("Enter your city for real-time weather updates:")
+    garden_size = st.number_input("Enter the size of your garden (in square meters):", min_value=1)
+    plant_types = st.text_area("Enter the types of plants in your garden:")
 
-if st.button("Get Irrigation Recommendation"):
-    if city:
-        # Get real-time weather data
-        weather_info = get_weather_data(city)
-        if isinstance(weather_info, dict):
-            st.write(f"### Current Weather in {city}")
-            st.write(f"Temperature: {weather_info['temperature']}°C")
-            st.write(f"Weather: {weather_info['description']}")
-            st.write(f"Humidity: {weather_info['humidity']}%")
+    if st.button("Get Irrigation Recommendation"):
+        if city:
+            # Get real-time weather data
+            weather_info = get_weather_data(city)
+            if isinstance(weather_info, dict):
+                st.write(f"### Current Weather in {city}")
+                st.write(f"Temperature: {weather_info['temperature']}°C")
+                st.write(f"Weather: {weather_info['description']}")
+                st.write(f"Humidity: {weather_info['humidity']}%")
 
-            # Get irrigation recommendation from OpenAI
-            recommendation = recommend_irrigation(weather_info, garden_size, plant_types)
-            st.write("### Irrigation Recommendation:")
-            st.write(recommendation)
+                # Get irrigation recommendation from OpenAI
+                recommendation = recommend_irrigation(weather_info, garden_size, plant_types)
+                st.write("### Irrigation Recommendation:")
+                st.write(recommendation)
+            else:
+                st.warning(weather_info)  # Display error message from the weather API
         else:
-            st.warning(weather_info)
-    else:
-        st.warning("Please enter a valid city name.")
+            st.warning("Please enter a valid city name.")
+
+# Main function to call the show function
+if __name__ == "__main__":
+    show()
